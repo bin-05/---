@@ -132,4 +132,90 @@ def img_Transform(car_contours, oldimg, pic_width, pic_hight):
             car_imgs.append(car_img)
 
     return car_imgs
+def img_color(card_imgs):
+    colors = []
+    for card_index, card_img in enumerate(card_imgs):
+
+        green = yello = blue = black = white = 0
+        card_img_hsv = cv2.cvtColor(card_img, cv2.COLOR_BGR2HSV)
+        # 有转换失败的可能，原因来自于上面矫正矩形出错
+        if card_img_hsv is None:
+            continue
+        row_num, col_num = card_img_hsv.shape[:2]
+        card_img_count = row_num * col_num
+
+        for i in range(row_num):
+            for j in range(col_num):
+                H = card_img_hsv.item(i, j, 0)
+                S = card_img_hsv.item(i, j, 1)
+                V = card_img_hsv.item(i, j, 2)
+                if 11 < H <= 34 and S > 34:
+                    yello += 1
+                elif 35 < H <= 99 and S > 34:
+                    green += 1
+                elif 99 < H <= 124 and S > 34:
+                    blue += 1
+
+                if 0 < H < 180 and 0 < S < 255 and 0 < V < 46:
+                    black += 1
+                elif 0 < H < 180 and 0 < S < 43 and 221 < V < 225:
+                    white += 1
+        color = "no"
+
+        limit1 = limit2 = 0
+        if yello * 2 >= card_img_count:
+            color = "yello"
+            limit1 = 11
+            limit2 = 34  # 有的图片有色偏偏绿
+        elif green * 2 >= card_img_count:
+            color = "green"
+            limit1 = 35
+            limit2 = 99
+        elif blue * 2 >= card_img_count:
+            color = "blue"
+            limit1 = 100
+            limit2 = 124  # 有的图片有色偏偏紫
+        elif black + white >= card_img_count * 0.7:
+            color = "bw"
+        colors.append(color)
+        card_imgs[card_index] = card_img
+
+        if limit1 == 0:
+            continue
+        xl, xr, yh, yl = accurate_place(card_img_hsv, limit1, limit2, color)
+        if yl == yh and xl == xr:
+            continue
+        need_accurate = False
+        if yl >= yh:
+            yl = 0
+            yh = row_num
+            need_accurate = True
+        if xl >= xr:
+            xl = 0
+            xr = col_num
+            need_accurate = True
+
+        if color == "green":
+            card_imgs[card_index] = card_img
+        else:
+            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[yl - (yh - yl) // 4:yh,xl:xr]
+
+        if need_accurate:
+            card_img = card_imgs[card_index]
+            card_img_hsv = cv2.cvtColor(card_img, cv2.COLOR_BGR2HSV)
+            xl, xr, yh, yl = accurate_place(card_img_hsv, limit1, limit2, color)
+            if yl == yh and xl == xr:
+                continue
+            if yl >= yh:
+                yl = 0
+                yh = row_num
+            if xl >= xr:
+                xl = 0
+                xr = col_num
+        if color == "green":
+            card_imgs[card_index] = card_img
+        else:
+            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[yl - (yh - yl) // 4:yh,xl:xr]
+
+    return colors, card_imgs
 

@@ -83,3 +83,53 @@ def img_findContours(img_contours):
             box = cv2.boxPoints(ant)
 
     return car_contours
+#进行矩形矫正
+def img_Transform(car_contours, oldimg, pic_width, pic_hight):
+    car_imgs = []
+    for car_rect in car_contours:
+        if -1 < car_rect[2] < 1:
+            angle = 1
+            # 对于角度为-1 1之间时，默认为1
+        else:
+            angle = car_rect[2]
+        car_rect = (car_rect[0], (car_rect[1][0] + 5, car_rect[1][1] + 5), angle)
+        box = cv2.boxPoints(car_rect)
+
+        heigth_point = right_point = [0, 0]
+        left_point = low_point = [pic_width, pic_hight]
+        for point in box:
+            if left_point[0] > point[0]:
+                left_point = point
+            if low_point[1] > point[1]:
+                low_point = point
+            if heigth_point[1] < point[1]:
+                heigth_point = point
+            if right_point[0] < point[0]:
+                right_point = point
+
+        if left_point[1] <= right_point[1]:  # 正角度
+            new_right_point = [right_point[0], heigth_point[1]]
+            pts2 = np.float32([left_point, heigth_point, new_right_point])  # 字符只是高度需要改变
+            pts1 = np.float32([left_point, heigth_point, right_point])
+            M = cv2.getAffineTransform(pts1, pts2)
+            dst = cv2.warpAffine(oldimg, M, (pic_width, pic_hight))
+            point_limit(new_right_point)
+            point_limit(heigth_point)
+            point_limit(left_point)
+            car_img = dst[int(left_point[1]):int(heigth_point[1]), int(left_point[0]):int(new_right_point[0])]
+            car_imgs.append(car_img)
+
+        elif left_point[1] > right_point[1]:  # 负角度
+            new_left_point = [left_point[0], heigth_point[1]]
+            pts2 = np.float32([new_left_point, heigth_point, right_point])  # 字符只是高度需要改变
+            pts1 = np.float32([left_point, heigth_point, right_point])
+            M = cv2.getAffineTransform(pts1, pts2)
+            dst = cv2.warpAffine(oldimg, M, (pic_width, pic_hight))
+            point_limit(right_point)
+            point_limit(heigth_point)
+            point_limit(new_left_point)
+            car_img = dst[int(right_point[1]):int(heigth_point[1]), int(new_left_point[0]):int(right_point[0])]
+            car_imgs.append(car_img)
+
+    return car_imgs
+

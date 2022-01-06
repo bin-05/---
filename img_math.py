@@ -247,4 +247,43 @@ def seperate_card(img, waves):
 
     return part_cards
 
+def img_mser_color(card_imgs):
+    colors = []
+    for card_index, card_img in enumerate(card_imgs):
+        green = yello = blue = black = white = 0
+        card_img_hsv = cv2.cvtColor(card_img, cv2.COLOR_BGR2HSV)
+        if card_img_hsv is None:
+            continue
+        row_num, col_num = card_img_hsv.shape[:2]
+        card_img_count = row_num * col_num
+        for i in range(row_num):
+            for j in range(col_num):
+                H = card_img_hsv.item(i, j, 0)
+                S = card_img_hsv.item(i, j, 1)
+                V = card_img_hsv.item(i, j, 2)
+                if 11 < H <= 34 and S > 34:
+                    yello += 1
+                elif 35 < H <= 99 and S > 34:
+                    green += 1
+                elif 99 < H <= 124 and S > 34:
+                    blue += 1
+                if 0 < H < 180 and 0 < S < 255 and 0 < V < 46:
+                    black += 1
+                elif 0 < H < 180 and 0 < S < 43 and 221 < V < 225:
+                    white += 1
+        color = "no"
+        if yello * 2 >= card_img_count:
+            color = "yello"
+
+        elif green * 2 >= card_img_count:
+            color = "green"
+
+        elif blue * 2 >= card_img_count:
+            color = "blue"
+
+        elif black + white >= card_img_count * 0.7:
+            color = "bw"
+        colors.append(color)
+        card_imgs[card_index] = card_img
+    return colors, card_imgs
 
